@@ -1172,7 +1172,7 @@ int AsciiExp::SearchMtl(Mtl* mtl)
 		for (int i = 0; i < mtl->NumSubMtls(); i++) {
 			Mtl* subMtl = mtl->GetSubMtl(i);
 			if (subMtl) {
-				mtlCount+=SearchMtl(subMtl);
+				mtlCount += SearchMtl(subMtl);
 			}
 		}
 	}
@@ -1180,11 +1180,53 @@ int AsciiExp::SearchMtl(Mtl* mtl)
 	return mtlCount;
 }
 
-void AsciiExp::Export_Material_Index_Count()
+bool AsciiExp::searchMesh(INode* node, bool exportSelected, int& meshNum, int* indexNum)
+{
+	if (exportSelected && node->Selected() == FALSE)
+		return TREE_CONTINUE;
+
+	if (!exportSelected || node->Selected()) {
+
+		ObjectState os = node->EvalWorldState(0);
+
+		if (os.obj && os.obj->SuperClassID() == GEOMOBJECT_CLASS_ID) {
+			if (GetIncludeObjGeom())
+			{
+				BOOL needDel;
+				TriObject* tri = GetTriObjectFromNode(node, GetStaticFrame(), needDel);
+				if (!tri) {
+					return FALSE;
+				}
+
+				Mesh* mesh = &tri->GetMesh();
+
+				indexNum[meshNum] = mesh->getNumFaces() * 3;
+				if (needDel) {
+					delete tri;
+				}
+
+				meshNum++;
+			}
+		}
+
+	}
+
+	for (int c = 0; c < node->NumberOfChildren(); c++) {
+		if (!searchMesh(node->GetChildNode(c), exportSelected, meshNum,indexNum))
+			return FALSE;
+	}
+
+
+	return true;
+}
+
+void AsciiExp::Export_Mtl_Mesh_Index_Count(bool exportSelected)
 {
 	if (!GetIncludeMtl()) {
 		return;
 	}
+
+	//material 수 구하기
 	int numMtls = mtlList.Count(); //sub말고 mtl자체의 수 
 
 	int totalMtlCount = 0; //sub포함 사용되는 mtl수. exported될 것
@@ -1192,6 +1234,38 @@ void AsciiExp::Export_Material_Index_Count()
 	for (int i = 0; i < numMtls; i++)
 	{
 		totalMtlCount += SearchMtl(mtlList.GetMtl(i));
+	}
+
+
+	//mesh,index 수 구하기
+	int meshCount = 0;
+	int indexCount[50] = { 0, }; //최대메쉬 50개
+	if (!exportSelected)
+	{
+		int numChildren = ip->GetRootNode()->NumberOfChildren();
+		for (int idx = 0; idx < numChildren; idx++)
+		{
+			if (ip->GetCancel())
+				break;
+			searchMesh(ip->GetRootNode()->GetChildNode(idx), exportSelected, meshCount,indexCount);
+		}
+	}
+	else
+	{
+		int numSelCount = ip->GetSelNodeCount();
+		for (int idx = 0; idx < numSelCount; idx++)
+		{
+			if (ip->GetCancel())
+				break;
+			searchMesh(ip->GetSelNode(idx), exportSelected, meshCount, indexCount);
+		}
+	}
+
+	_ftprintf(pStream, _T("%s : %d\n"), _T("usedMaterialCnt"), totalMtlCount);
+	_ftprintf(pStream, _T("%s : %d\n"), _T("meshCnt"), meshCount);
+	for (int i = 0; i < meshCount; i++)
+	{
+		_ftprintf(pStream, _T("%s : %d\n"), _T("indexCnt"), indexCount[i]);
 	}
 }
 

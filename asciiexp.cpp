@@ -419,7 +419,7 @@ int AsciiExp::DoExport(const TCHAR* name, ExpInterface* ei, Interface* i, BOOL s
 	ExportGlobalInfo();
 
 	//mtl, index개수 따져서 출력하는 함수먼저. vertex는 할 필요없음
-	Export_Material_Index_Count();
+	Export_Mtl_Mesh_Index_Count(exportSelected);
 
 	// Export list of material definitions
 	ExportMaterialList();

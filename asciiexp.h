@@ -78,8 +78,9 @@ public:
 
 	// High level export
 	void	ExportGlobalInfo();
+	bool searchMesh(INode* node, bool exportSelected, int& meshNum, int* indexNum);
+	void	Export_Mtl_Mesh_Index_Count(bool exportSelected);
 	int SearchMtl(Mtl* mtl);
-	void	Export_Material_Index_Count();
 	void	ExportMaterialList();
 	void	ExportGeomObject(INode* node, int indentLevel); 
 	void	ExportLightObject(INode* node, int indentLevel); 
