@@ -478,7 +478,7 @@ void AsciiExp::ExportHelperObject(INode* node, int indentLevel)
 	}
 
 	if (GetIncludeAnim()) {
-		ExportAnimKeys(node, indentLevel);
+		//ExportAnimKeys(node, indentLevel);
 	}
 
 	_ftprintf(pStream, _T("%s}\n"), indent.data());
@@ -1261,11 +1261,11 @@ void AsciiExp::Export_Mtl_Mesh_Index_Count(bool exportSelected)
 		}
 	}
 
-	_ftprintf(pStream, _T("%s : %d\n"), _T("usedMaterialCnt"), totalMtlCount);
-	_ftprintf(pStream, _T("%s : %d\n"), _T("meshCnt"), meshCount);
+	_ftprintf(pStream, _T("%s %d\n"), _T("usedMaterialCnt"), totalMtlCount);
+	_ftprintf(pStream, _T("%s %d\n"), _T("meshCnt"), meshCount);
 	for (int i = 0; i < meshCount; i++)
 	{
-		_ftprintf(pStream, _T("%s : %d\n"), _T("indexCnt"), indexCount[i]);
+		_ftprintf(pStream, _T("%s %d\n"), _T("indexCnt"), indexCount[i]);
 	}
 }
 
@@ -1425,20 +1425,20 @@ void AsciiExp::DumpTexture(Texmap* tex, Class_ID cid, int subNo, float amt, int 
 	TSTR className;
 	tex->GetClassName(className, true);
 
-	_ftprintf(pStream, _T("%s%s {\n"), indent.data(), GetMapID(cid, subNo));
+	_ftprintf(pStream, _T("%s%s {\n"), indent.data(), _T("*TEXTURE"));
 
 	Interface14* iface = GetCOREInterface14();
 	UINT codepage = iface->DefaultTextSaveCodePage(true);
 	TSTR texName = FixupName(tex->GetName());
 	const char* texName_locale = texName.ToCP(codepage);
 	_ftprintf(pStream, _T("%s\t%s \"%hs\"\n"), indent.data(), ID_TEXNAME, texName_locale);
-	TSTR classNameStr = FixupName(className);
-	const char* className_locale = classNameStr.ToCP(codepage);
-	_ftprintf(pStream, _T("%s\t%s \"%hs\"\n"), indent.data(), ID_TEXCLASS, className_locale);
+	//TSTR classNameStr = FixupName(className);
+	//const char* className_locale = classNameStr.ToCP(codepage);
+	//_ftprintf(pStream, _T("%s\t%s \"%hs\"\n"), indent.data(), ID_TEXCLASS, className_locale);
 
 	// If we include the subtexture ID, a parser could be smart enough to get
 	// the class name of the parent texture/material and make it mean something.
-	_ftprintf(pStream, _T("%s\t%s %d\n"), indent.data(), ID_TEXSUBNO, subNo);
+	//_ftprintf(pStream, _T("%s\t%s %d\n"), indent.data(), ID_TEXSUBNO, subNo);
 
 	// Is this a bitmap texture?
 	// We know some extra bits 'n pieces about the bitmap texture
