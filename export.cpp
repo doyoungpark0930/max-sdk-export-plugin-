@@ -98,7 +98,7 @@ void AsciiExp::ExportGeomObject(INode* node, int indentLevel)
 	}
 
 	if (GetIncludeAnim()) {
-		//ExportAnimKeys(node, indentLevel);
+		ExportAnimKeys(node, indentLevel);
 	}
 
 	if (GetIncludeMeshAnim()) {
@@ -447,6 +447,20 @@ void AsciiExp::ExportCameraSettings(CameraState* cs, CameraObject* cam, TimeValu
 
 void AsciiExp::ExportHelperObject(INode* node, int indentLevel)
 {
+	Interface14* iface = GetCOREInterface14();
+	UINT codepage = iface->DefaultTextSaveCodePage(true);
+	TSTR nodeStr = FixupName(node->GetName());
+	std::wstring wname(nodeStr.data());
+
+	if (!helperRootNode)
+	{
+		if (m_BoneMap.find(wname) == m_BoneMap.end()) return;
+	}
+	else //Helper중 루트노드는 출력한다
+	{
+		helperRootNode = false;
+	}
+
 	TSTR indent = GetIndent(indentLevel);
 	ExportNodeHeader(node, ID_HELPER, indentLevel);
 
@@ -478,7 +492,7 @@ void AsciiExp::ExportHelperObject(INode* node, int indentLevel)
 	}
 
 	if (GetIncludeAnim()) {
-		//ExportAnimKeys(node, indentLevel);
+		ExportAnimKeys(node, indentLevel);
 	}
 
 	_ftprintf(pStream, _T("%s}\n"), indent.data());
@@ -547,6 +561,7 @@ void AsciiExp::ExportNodeTM(INode* node, int indentLevel)
 	//LocalTM을 분해(decomp_affine함수이용)해서 이동, 회전, 스케일 값등을 얻는다
 	AffineParts ap;
 	decomp_affine(LocalTM, &ap);
+
 	// Node의 로컬행렬, 월드행렬을 출력한다
 	// 3ds max의 오른손 좌표계를 directX의 왼손 좌표계로 변환한다
 	_ftprintf(pStream, _T("%s\t%s {\n"), indent.data(), _T("*NODE_TRANSFORMATION_MATRIX"));
@@ -771,9 +786,9 @@ void AsciiExp::ComputeTangentVector(INode* node, Mesh* mesh, bool bNegScale, Tim
 		UINT uiIndex2 = mesh->faces[i].v[vx[1]];
 		UINT uiIndex3 = mesh->faces[i].v[vx[0]];
 
-		Point3 v1 = Aftertm * InvWorldTM * mesh->verts[uiIndex1];
-		Point3 v2 = Aftertm * InvWorldTM * mesh->verts[uiIndex2];
-		Point3 v3 = Aftertm * InvWorldTM * mesh->verts[uiIndex3];
+		Point3 v1 = Aftertm * mesh->verts[uiIndex1];
+		Point3 v2 = Aftertm * mesh->verts[uiIndex2];
+		Point3 v3 = Aftertm * mesh->verts[uiIndex3];
 		UVVert w1 = mesh->tVerts[mesh->tvFace[i].t[vx[2]]];
 		UVVert w2 = mesh->tVerts[mesh->tvFace[i].t[vx[1]]];
 		UVVert w3 = mesh->tVerts[mesh->tvFace[i].t[vx[0]]];
@@ -816,17 +831,17 @@ void AsciiExp::ComputeTangentVector(INode* node, Mesh* mesh, bool bNegScale, Tim
 			{
 				//non-uniform scale변환을 위해 이렇게 함
 				//InvWorldTM자체가 역행렬이라 전치행렬 * n만 한 구조
-				vn.x = (Aftertm * InvWorldTM).GetColumn3(0).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
-					(Aftertm * InvWorldTM).GetColumn3(0).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
-					(Aftertm * InvWorldTM).GetColumn3(0).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
+				vn.x = (Aftertm).GetColumn3(0).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
+					(Aftertm).GetColumn3(0).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
+					(Aftertm).GetColumn3(0).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
 
-				vn.y = (Aftertm * InvWorldTM).GetColumn3(1).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
-					(Aftertm * InvWorldTM).GetColumn3(1).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
-					(Aftertm * InvWorldTM).GetColumn3(1).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
+				vn.y = (Aftertm).GetColumn3(1).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
+					(Aftertm).GetColumn3(1).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
+					(Aftertm).GetColumn3(1).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
 
-				vn.z = (Aftertm * InvWorldTM).GetColumn3(2).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
-					(Aftertm * InvWorldTM).GetColumn3(2).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
-					(Aftertm * InvWorldTM).GetColumn3(2).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
+				vn.z = (Aftertm).GetColumn3(2).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).x +
+					(Aftertm).GetColumn3(2).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).y +
+					(Aftertm).GetColumn3(2).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(vert))).z;
 			}
 			else
 			{
@@ -887,7 +902,24 @@ void AsciiExp::ComputeTangentVector(INode* node, Mesh* mesh, bool bNegScale, Tim
 			m_mBinormal[i] = vtrBinormal;
 	}
 }
+void PrintMatrix3(const Matrix3& m, const MCHAR* name)
+{
+	DebugPrint(_M("\n====== %s ======\n"), name);
 
+	// 3×3 회전부
+	DebugPrint(_M("[ %8.4f %8.4f %8.4f ]\n"),
+		m.GetRow(0).x, m.GetRow(0).y, m.GetRow(0).z);
+
+	DebugPrint(_M("[ %8.4f %8.4f %8.4f ]\n"),
+		m.GetRow(1).x, m.GetRow(1).y, m.GetRow(1).z);
+
+	DebugPrint(_M("[ %8.4f %8.4f %8.4f ]\n"),
+		m.GetRow(2).x, m.GetRow(2).y, m.GetRow(2).z);
+
+	// translation
+	DebugPrint(_M("Translation: [ %8.4f %8.4f %8.4f ]\n"),
+		m.GetTrans().x, m.GetTrans().y, m.GetTrans().z);
+}
 void AsciiExp::ExportMesh(INode* node, TimeValue t, int indentLevel)
 {
 	int i, j, index;
@@ -906,6 +938,10 @@ void AsciiExp::ExportMesh(INode* node, TimeValue t, int indentLevel)
 	if (!os.obj || os.obj->SuperClassID() != GEOMOBJECT_CLASS_ID) {
 		return; // Safety net. This shouldn't happen.
 	}
+
+	//PrintMatrix3(Aftertm, _M("Aftertm"));
+	//PrintMatrix3(WorldTM, _M("WorldTM"));
+	//PrintMatrix3(InvWorldTM, _M("InvWorldTM"));
 
 	Modifier* pSkinMod = FindSkinModifier(node); //node에 skin이 있다는 건 뼈도 있다는 뜻
 
@@ -976,7 +1012,9 @@ void AsciiExp::ExportMesh(INode* node, TimeValue t, int indentLevel)
 			ZeroMemory(&vn, sizeof(Point3));
 			UVVert tv;
 			ZeroMemory(&tv, sizeof(UVVert));
-			v = VectorTransform(Aftertm * InvWorldTM, mesh->verts[nVertexNum]);
+			//Aftertm * InvWorldTM
+			v = VectorTransform(Aftertm, mesh->verts[nVertexNum]);
+			//v = mesh->verts[nVertexNum];
 			int NumTvert = mesh->getNumTVerts(); //uv좌표 개수
 			if (NumTvert)
 			{
@@ -987,17 +1025,17 @@ void AsciiExp::ExportMesh(INode* node, TimeValue t, int indentLevel)
 			if (pSkinMod)
 			{
 				//non-uniform scale변환을 위해 이렇게 함
-				vn.x = (Aftertm * InvWorldTM).GetColumn3(0).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
-					(Aftertm * InvWorldTM).GetColumn3(0).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
-					(Aftertm * InvWorldTM).GetColumn3(0).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
+				vn.x = (Aftertm).GetColumn3(0).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
+					(Aftertm).GetColumn3(0).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
+					(Aftertm).GetColumn3(0).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
 
-				vn.y = (Aftertm * InvWorldTM).GetColumn3(1).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
-					(Aftertm * InvWorldTM).GetColumn3(1).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
-					(Aftertm * InvWorldTM).GetColumn3(1).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
+				vn.y = (Aftertm).GetColumn3(1).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
+					(Aftertm).GetColumn3(1).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
+					(Aftertm).GetColumn3(1).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
 
-				vn.z = (Aftertm * InvWorldTM).GetColumn3(2).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
-					(Aftertm * InvWorldTM).GetColumn3(2).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
-					(Aftertm * InvWorldTM).GetColumn3(2).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
+				vn.z = (Aftertm).GetColumn3(2).x * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).x +
+					(Aftertm).GetColumn3(2).y * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).y +
+					(Aftertm).GetColumn3(2).z * (GetVertexNormal(mesh, i, mesh->getRVertPtr(nVertexNum))).z;
 			}
 			else
 			{
@@ -1014,7 +1052,6 @@ void AsciiExp::ExportMesh(INode* node, TimeValue t, int indentLevel)
 			_ftprintf(pStream, _T("%.4f\t%.4f\t"), tv.x, tv.y);
 			_ftprintf(pStream, _T("%s\t"), Format(vn).data());
 			_ftprintf(pStream, _T("%.4f\t%.4f\t%.4f\n"), vtrTangent.x, vtrTangent.y, vtrTangent.z);
-			//_ftprintf(pStream, _T("%f\t%f\t%f\n"), vtrBinormal.x, vtrBinormal.y, vtrBinormal.z);
 
 			if (pSkinMod)
 				ExportSkinName(node, pSkinMod, nVertexNum);
@@ -1143,6 +1180,148 @@ void AsciiExp::DumpJointParams(JointParams* joint, int indentLevel)
 	}
 
 }
+/****************************************************************************
+
+  BoneList PreProcess
+
+****************************************************************************/
+
+void AsciiExp::CheckBoneList(INode* pNode, Modifier* pMod, int NumVert) //vertex하나에 대하여
+{
+	ISkin* pSkin = (ISkin*)pMod->GetInterface(I_SKIN);
+	if (!pSkin) return;
+	ISkinContextData* pSkinData = (ISkinContextData*)pSkin->GetContextInterface(pNode);
+	int nNumNode = pSkinData->GetNumAssignedBones(NumVert);
+
+	std::multimap<float, int> mWeightList;
+	mWeightList.clear();
+	for (int x = 0; x < nNumNode; x++)
+	{
+		float fWeight = pSkinData->GetBoneWeight(NumVert, x);
+		mWeightList.insert(std::make_pair(fWeight, x));
+	}
+	if (nNumNode > MAX_BLEND)
+		nNumNode = MAX_BLEND;
+
+	std::multimap<float, int>::reverse_iterator _iterRS = mWeightList.rbegin();
+	std::multimap<float, int>::reverse_iterator _iterRE = mWeightList.rend();
+	for (int i = 0; _iterRS != _iterRE; ++_iterRS, i++)
+	{
+		INode* pBone = pSkin->GetBone(pSkinData->GetAssignedBone(NumVert, _iterRS->second));
+		if (pBone)
+		{
+			int nBoneID = -1;
+			if (m_BoneMap.find(pBone->GetName()) == m_BoneMap.end())
+			{
+				m_BoneMap[pBone->GetName()] = m_BoneCounter;
+				nBoneID = m_BoneCounter;
+				m_BoneCounter++;
+			}
+			else
+			{
+				nBoneID = m_BoneMap[pBone->GetName()];
+			}
+			if (nBoneID == -1) DebugPrint(_M("can't find bone : %s"), pBone->GetName());
+		}
+		if (i == (nNumNode - 1)) break;
+	}
+}
+
+
+bool AsciiExp::searchBone(INode* node, bool exportSelected)
+{
+	if (exportSelected && node->Selected() == FALSE)
+		return TREE_CONTINUE;
+
+	if (!exportSelected || node->Selected()) {
+
+		ObjectState os = node->EvalWorldState(0);
+
+		if (os.obj && os.obj->SuperClassID() == GEOMOBJECT_CLASS_ID) {
+			if (GetIncludeObjGeom())
+			{
+
+				Matrix3 Aftertm = node->GetObjTMAfterWSM(GetStaticFrame());
+
+				BOOL negScale = TMNegParity(Aftertm);
+				Modifier* pSkinMod = FindSkinModifier(node); //node에 skin이 있다는 건 뼈도 있다는 뜻
+
+				int vx[3];
+				if (negScale) {
+					vx[0] = 2;
+					vx[1] = 1;
+					vx[2] = 0;
+				}
+				else {
+					vx[0] = 0;
+					vx[1] = 1;
+					vx[2] = 2;
+				}
+
+				BOOL needDel;
+				TriObject* tri = GetTriObjectFromNode(node, GetStaticFrame(), needDel);
+				if (!tri) {
+					return FALSE;
+				}
+
+				Mesh* mesh = &tri->GetMesh();
+
+				for (int i = 0; i < mesh->getNumFaces(); i++)
+				{
+					for (int j = 2; j >= 0; j--)
+					{
+						int nVertexNum = mesh->faces[i].v[vx[j]];
+
+						if (pSkinMod)
+							CheckBoneList(node, pSkinMod, nVertexNum);
+					}
+
+				}
+
+
+				if (needDel) {
+					delete tri;
+				}
+
+
+			}
+		}
+
+	}
+
+	for (int c = 0; c < node->NumberOfChildren(); c++) {
+		if (!searchBone(node->GetChildNode(c), exportSelected))
+			return FALSE;
+	}
+
+
+	return true;
+}
+
+void AsciiExp::PreBoneListProcess(bool exportSelected)
+{
+	if (!exportSelected)
+	{
+		int numChildren = ip->GetRootNode()->NumberOfChildren();
+		for (int idx = 0; idx < numChildren; idx++)
+		{
+			if (ip->GetCancel())
+				break;
+			searchBone(ip->GetRootNode()->GetChildNode(idx), exportSelected);
+		}
+	}
+	else
+	{
+		int numSelCount = ip->GetSelNodeCount();
+		for (int idx = 0; idx < numSelCount; idx++)
+		{
+			if (ip->GetCancel())
+				break;
+			searchBone(ip->GetRootNode()->GetChildNode(idx), exportSelected);
+		}
+	}
+
+}
 
 /****************************************************************************
 
@@ -1212,7 +1391,7 @@ bool AsciiExp::searchMesh(INode* node, bool exportSelected, int& meshNum, int* i
 	}
 
 	for (int c = 0; c < node->NumberOfChildren(); c++) {
-		if (!searchMesh(node->GetChildNode(c), exportSelected, meshNum,indexNum))
+		if (!searchMesh(node->GetChildNode(c), exportSelected, meshNum, indexNum))
 			return FALSE;
 	}
 
@@ -1247,7 +1426,7 @@ void AsciiExp::Export_Mtl_Mesh_Index_Count(bool exportSelected)
 		{
 			if (ip->GetCancel())
 				break;
-			searchMesh(ip->GetRootNode()->GetChildNode(idx), exportSelected, meshCount,indexCount);
+			searchMesh(ip->GetRootNode()->GetChildNode(idx), exportSelected, meshCount, indexCount);
 		}
 	}
 	else
@@ -1360,7 +1539,7 @@ void AsciiExp::DumpMaterial(Mtl* mtl, int mtlID, int subNo, int indentLevel)
 		_ftprintf(pStream, _T("%s\t%s %s\n"), indent.data(), ID_SPECULAR, Format(mtl->GetSpecular()).data());
 		_ftprintf(pStream, _T("%s\t%s %s\n"), indent.data(), ID_TRANSPARENCY, Format(mtl->GetXParency()).data());
 	}
-	DebugPrint(_M("subTexmapNum : %d"), mtl->NumSubTexmaps());
+	//DebugPrint(_M("subTexmapNum : %d"), mtl->NumSubTexmaps());
 	for (i = 0; i < mtl->NumSubTexmaps(); i++) {
 		Texmap* subTex = mtl->GetSubTexmap(i);
 		float amt = 1.0f;
@@ -1449,7 +1628,7 @@ void AsciiExp::DumpTexture(Texmap* tex, Class_ID cid, int subNo, float amt, int 
 		_ftprintf(pStream, _T("%s\t%s \"%hs\"\n"), indent.data(), ID_BITMAP, mapName_locale);
 	}
 
-	DebugPrint(_M("texTexmapNum : %d"), tex->NumSubTexmaps());
+	//DebugPrint(_M("texTexmapNum : %d"), tex->NumSubTexmaps());
 	for (int i = 0; i < tex->NumSubTexmaps(); i++) {
 		DumpTexture(tex->GetSubTexmap(i), tex->ClassID(), i, 1.0f, indentLevel + 1);
 	}
@@ -1706,7 +1885,7 @@ TSTR AsciiExp::Format(AngAxis value)
 	TCHAR fmt[160];
 
 	_stprintf(fmt, _T("%s\t%s\t%s\t%s"), szFmtStr, szFmtStr, szFmtStr, szFmtStr);
-	_stprintf(buf, fmt, value.axis.x, value.axis.y, value.axis.z, value.angle);
+	_stprintf(buf, fmt, value.axis.x, value.axis.z, value.axis.y, value.angle);
 
 	CommaScan(buf);
 	return buf;

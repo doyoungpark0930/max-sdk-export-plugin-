@@ -78,8 +78,11 @@ public:
 
 	// High level export
 	void	ExportGlobalInfo();
-	bool searchMesh(INode* node, bool exportSelected, int& meshNum, int* indexNum);
+	bool	searchMesh(INode* node, bool exportSelected, int& meshNum, int* indexNum);
 	void	Export_Mtl_Mesh_Index_Count(bool exportSelected);
+	void CheckBoneList(INode* pNode, Modifier* pMod, int NumVert);
+	bool	searchBone(INode* node, bool exportSelected);
+	void	PreBoneListProcess(bool exportSelected);
 	int SearchMtl(Mtl* mtl);
 	void	ExportMaterialList();
 	void	ExportGeomObject(INode* node, int indentLevel); 
@@ -87,6 +90,7 @@ public:
 	void	ExportCameraObject(INode* node, int indentLevel); 
 	void	ExportShapeObject(INode* node, int indentLevel); 
 	void	ExportHelperObject(INode* node, int indentLevel);
+	bool helperRootNode = true;
 
 	// Mid level export
 	Modifier* FindSkinModifier(INode* node);

@@ -415,6 +415,9 @@ int AsciiExp::DoExport(const TCHAR* name, ExpInterface* ei, Interface* i, BOOL s
 	nCurNode = 0;
 	PreProcess(ip->GetRootNode(), nTotalNodeCount);
 
+	PreBoneListProcess(exportSelected);
+
+
 	// First we write out a file header with global information. 
 	ExportGlobalInfo();
 
@@ -423,6 +426,7 @@ int AsciiExp::DoExport(const TCHAR* name, ExpInterface* ei, Interface* i, BOOL s
 
 	// Export list of material definitions
 	ExportMaterialList();
+
 
 	// Call our node enumerator.
 	// The nodeEnum function will recurse into itself and 
@@ -450,14 +454,7 @@ int AsciiExp::DoExport(const TCHAR* name, ExpInterface* ei, Interface* i, BOOL s
 		}
 	}
 	WriteBoneList();
-	//원래이거
-	/*
-	 int numChildren = ip->GetRootNode()->NumberOfChildren();
-	for (int idx = 0; idx<numChildren; idx++) {
-		if (ip->GetCancel())
-			break;
-		nodeEnum(ip->GetRootNode()->GetChildNode(idx), 0);
-	}*/
+
 
 	// We're done. Finish the progress bar.
 	ip->ProgressEnd();

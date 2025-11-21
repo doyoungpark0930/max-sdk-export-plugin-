@@ -56,14 +56,14 @@ void AsciiExp::ExportAnimKeys(INode* node, int indentLevel)
 	TSTR nodeName = FixupName(node->GetName());
 	const char* nodeName_locale = nodeName.ToCP(codepage);
 	if (bDoKeys) {
+		DebugPrint(_M("dokeys"));
 		// Only dump the track header if any of the controllers have keys
 		if (node->GetTMController()->GetPositionController()->NumKeys() ||
 			node->GetTMController()->GetRotationController()->NumKeys() ||
 			node->GetTMController()->GetScaleController()->NumKeys()) {
 
 			_ftprintf(pStream, _T("%s\t%s {\n"), indent.data(), ID_TM_ANIMATION); 
-			_ftprintf(pStream, _T("%s\t\t%s \"%hs\"\n"), indent.data(), ID_NODE_NAME,
-				nodeName_locale);
+			//_ftprintf(pStream, _T("%s\t\t%s \"%hs\"\n"), indent.data(), ID_NODE_NAME,nodeName_locale);
 
 			DumpPosKeys(node->GetTMController()->GetPositionController(), indentLevel);
 			DumpRotKeys(node->GetTMController()->GetRotationController(), indentLevel);
@@ -74,9 +74,8 @@ void AsciiExp::ExportAnimKeys(INode* node, int indentLevel)
 	}
 	else if (CheckForAnimation(node, bPosAnim, bRotAnim, bScaleAnim)) {
 		_ftprintf(pStream, _T("%s\t%s {\n"), indent.data(), ID_TM_ANIMATION); 
-		_ftprintf(pStream, _T("%s\t\t%s \"%hs\"\n"), indent.data(), ID_NODE_NAME,
-			nodeName_locale);
-
+		//_ftprintf(pStream, _T("%s\t\t%s \"%hs\"\n"), indent.data(), ID_NODE_NAME, nodeName_locale);
+		//DebugPrint(_M("sample"));
 		if (bPosAnim) {
 			DumpPosSample(node, indentLevel);
 		}
@@ -174,7 +173,7 @@ BOOL AsciiExp::CheckForAnimation(INode* node, BOOL& bPos, BOOL& bRot, BOOL& bSca
 		}
 
 	return bPos || bRot || bScale;
-	}
+}
 
 void AsciiExp::DumpPosSample(INode* node, int indentLevel) 
 {	
@@ -185,7 +184,10 @@ void AsciiExp::DumpPosSample(INode* node, int indentLevel)
 	TimeValue start = ip->GetAnimRange().Start();
 	TimeValue end = ip->GetAnimRange().End();
 	TimeValue t;
-	int delta = GetTicksPerFrame() * GetKeyFrameStep();
+	int delta = GetTicksPerFrame() * GetKeyFrameStep(); //160*5
+	DebugPrint(_M("NodeName : %s"), node->GetName());
+	DebugPrint(_M("getTickFrame : %d"), GetTicksPerFrame());
+	DebugPrint(_M("getKeyFrameStep: %d"), GetKeyFrameStep());
 	Matrix3 tm;
 	AffineParts ap;
 	Point3	prevPos;
@@ -251,7 +253,7 @@ void AsciiExp::DumpRotSample(INode* node, int indentLevel)
 			indent.data(),
 			ID_ROT_SAMPLE,
 			t,
-			Format(q).data());
+			Format(ap.q).data());
 	}
 
 	_ftprintf(pStream, _T("%s\t\t}\n"), indent.data());
@@ -266,7 +268,8 @@ void AsciiExp::DumpScaleSample(INode* node, int indentLevel)
 	TimeValue start = ip->GetAnimRange().Start();
 	TimeValue end = ip->GetAnimRange().End();
 	TimeValue t;
-	int delta = GetTicksPerFrame() * GetKeyFrameStep();
+	//1프레임당 160tick. 160*5가 델타인건, 5프레임 단위로 끊고 0~5프레임, 6~10프레임은 보간하라는건가?
+	int delta = GetTicksPerFrame() * GetKeyFrameStep(); 
 	Matrix3 tm;
 	AffineParts ap;
 	Point3	prevFac;
